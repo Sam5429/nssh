@@ -3,8 +3,10 @@ mod rsa;
 use rsa::{cypher_file, decypher_file, PrivateKey, PublicKey};
 
 fn main() {
-    let public_key = PublicKey::new(2436929723, 5);
-    let private_key = PrivateKey::new(56519, 43117, 1462098053, public_key.clone());
+    // let public_key = PublicKey::new(2436929723, 5);
+    // let private_key = PrivateKey::new(56519, 43117, 1462098053, public_key.clone());
+    let private_key = PrivateKey::generate();
+    let public_key = private_key.pub_key.clone();
 
     let args: Vec<String> = std::env::args().collect();
     // affiche le contenur de repertoir courant

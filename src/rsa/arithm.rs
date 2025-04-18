@@ -59,18 +59,18 @@ pub fn modular_inv(a: u32, n: u32) -> u32 {
         return coef_eb.u as u32;
     }
     // ! BUG : il y a moyen que ca fasse un overflow
-    (coef_eb.u + n as i32) as u32
+    (coef_eb.u as i64 + n as i64) as u32
 }
 
 // find a coprime of n
 pub fn find_coprime(n: u32) -> u32 {
-    loop {
-        let suspect = rand::rng().random_range(2..n);
-        let coef_eb = bezout(suspect, n);
+    for i in 2..n {
+        let coef_eb = bezout(i, n);
         if coef_eb.gcd == 1 {
-            return suspect;
+            return i;
         }
     }
+    return u32::MAX;
 }
 
 pub fn fast_exp(mut base: u32, mut exp: u32, modulus: u32) -> u32 {

@@ -32,7 +32,7 @@ pub struct PrivateKey {
     p: u32,
     q: u32,
     d: u32,
-    pub_key: PublicKey,
+    pub pub_key: PublicKey,
 }
 
 impl PrivateKey {
@@ -42,9 +42,21 @@ impl PrivateKey {
 
     // entre 32768 et 65535
     pub fn generate() -> Self {
-        let p = mr_prime(16, 0.9);
-        let q = mr_prime(16, 0.9);
+        let mut p = mr_prime(16, 0.9);
+        let mut q = mr_prime(16, 0.9);
+        //print!("{}", p);
+        loop {
+            if (p * q) >> 31 == 1 {
+                break;
+            }
+            p = mr_prime(16, 0.9);
+            q = mr_prime(16, 0.9);
+            //println!(" {}", q);
+        }
         let n = (p * q) as u32;
+        // if n & (1 << 31) != 1 {
+        //     println!("ca va pas marcher");
+        // }
         let phi_n = (p - 1) * (q - 1);
         let e = find_coprime(phi_n);
         let d = modular_inv(e, phi_n);
@@ -148,10 +160,8 @@ mod tests {
     fn cypher_decipher() {
         // Arrange -> on a un message et une clé
         let message = "Hello, world!";
-        let public_key = PublicKey::new(1562505521, 899953075);
-        let private_key = PrivateKey::new(33409, 46769, 80409979, public_key);
-        // let public_key = PublicKey::new(2436929723, 5);
-        // let private_key = PrivateKey::new(56519, 43117, 1462098053, public_key.clone());
+        let public_key = PublicKey::new(2436929723, 5);
+        let private_key = PrivateKey::new(56519, 43117, 1462098053, public_key.clone());
 
         // Act -> chiffre et déciffre un message
 
@@ -173,7 +183,6 @@ mod tests {
         // Act -> créer une clé chiffre et déciffre un message
         let private_key = PrivateKey::generate();
         let public_key = private_key.pub_key.clone();
-        println!("p: {}, q: {}", private_key.p, private_key.q);
 
         let blocks = bytes_to_blocks(message.as_bytes().to_vec());
         let cyphered_blocks = cypher_blocks(blocks, public_key);
