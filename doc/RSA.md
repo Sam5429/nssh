@@ -67,18 +67,14 @@ Top maintenant on sait comment faire pour trouver nos module mais il reste une q
 Le théorème d'Euler nous dit que pour $n$ premier et $a$ premier avec $n$, alors $a^{\phi(n)} \equiv 1 \mod n$.
 
 - **Application à RSA** :
-  \[
+	$$
   e \cdot d \equiv 1 \mod \phi(n)
-  \]
-  \[
   m^{e \cdot d} = m^{\phi(n) \cdot k} \cdot m
-  \]
+
   En appliquant le théorème d'Euler :
-  \[
+
   m^{e \cdot d} \equiv 1^k \cdot m \mod n
-  \]
-  \[
   m^{e \cdot d} \equiv m \mod n
-  \]
+  $$
 
 Et c'est donc grâce à ce théorème que nous pouvons prouver que, après avoir élevé le message à la puissance $e$ puis $d$, nous retrouvons bien le message d'origine !
