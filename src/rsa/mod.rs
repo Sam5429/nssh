@@ -40,23 +40,19 @@ impl PrivateKey {
         PrivateKey { p, q, d, pub_key }
     }
 
-    // entre 32768 et 65535
+    /// Generate a new private key with a public key
     pub fn generate() -> Self {
         let mut p = mr_prime(16, 0.9);
         let mut q = mr_prime(16, 0.9);
-        //print!("{}", p);
+        // have to find a n that have 32 binary numbers
         loop {
             if (p * q) >> 31 == 1 {
                 break;
             }
             p = mr_prime(16, 0.9);
             q = mr_prime(16, 0.9);
-            //println!(" {}", q);
         }
         let n = (p * q) as u32;
-        // if n & (1 << 31) != 1 {
-        //     println!("ca va pas marcher");
-        // }
         let phi_n = (p - 1) * (q - 1);
         let e = find_coprime(phi_n);
         let d = modular_inv(e, phi_n);
@@ -98,7 +94,7 @@ pub fn bytes_to_file(bytes: Vec<u8>, path: &str) {
 
 fn bytes_to_blocks(bytes: Vec<u8>) -> Vec<u32> {
     bytes
-        .chunks(4)
+        .chunks(4) // like iter but over 4 element at se same time
         .map(|chunk| {
             let mut block = 0;
             for (i, &byte) in chunk.iter().enumerate() {
@@ -121,7 +117,7 @@ fn blocks_to_bytes(blocks: Vec<u32>) -> Vec<u8> {
         })
         .collect();
 
-    // supp les octets null qui on était rajouter lors de la convertion en blocks
+    // delete the null bytes at the end that were added during conversion to blocks
     bytes.truncate(
         bytes.len()
             - bytes
@@ -195,5 +191,30 @@ mod tests {
 
         // Assert -> vérifie si le message est le bon
         assert_eq!(message, decyphered_message);
+    }
+
+    #[test]
+    fn key_gen_rate() {
+        // Arange
+        let mut bad_key = 0;
+        let message = "Hello, world!";
+
+        // Act
+        for _ in 0..10000 {
+            let private_key = PrivateKey::generate();
+            let public_key = private_key.pub_key.clone();
+
+            let blocks = bytes_to_blocks(message.as_bytes().to_vec());
+            let cyphered_blocks = cypher_blocks(blocks, public_key);
+            let decyphered_blocks = decypher_blocks(cyphered_blocks, private_key);
+            let decyphered_bytes = blocks_to_bytes(decyphered_blocks);
+            String::from_utf8(decyphered_bytes).unwrap_or_else(|_| {
+                bad_key += 1;
+                String::new()
+            });
+        }
+
+        // Assert
+        assert!(bad_key as f64 / 10000 as f64 <= 0.9);
     }
 }

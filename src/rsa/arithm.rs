@@ -105,7 +105,6 @@ fn mr_witness(n: u32, m: u32, s: u32, a: u32) -> bool {
 /// test nb_witness random witness for the primeness of n
 pub fn mr_test(n: u32, nb_witness: u32) -> bool {
     let mut s = 0;
-    let mut m = 0;
 
     // find s and m with n-1 = 2^s*m with m odd
     let mut tmp = n - 1;
@@ -113,7 +112,7 @@ pub fn mr_test(n: u32, nb_witness: u32) -> bool {
         tmp /= 2;
         s += 1;
     }
-    m = tmp;
+    let m = tmp;
 
     for _ in 0..nb_witness {
         let witness = rand::random();
