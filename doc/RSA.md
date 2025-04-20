@@ -15,11 +15,11 @@ Léo et Léa ont un autre problème : ils sont loin l'un de l'autre et n'ont pas
 
 Mais par chance, Léa propose une solution :
 
-1. **Choix des nombres premiers** : Léa choisit un entier \( n \) qui est décomposable en deux nombres premiers distincts \( p \) et \( q \).
-2. **Calcul des clés** : À partir de ces deux nombres, elle calcule \( e \) qui est premier avec \( (p-1)(q-1) \) et \( d \), l'inverse modulaire de \( e \).
-3. **Envoi des clés publiques** : Léa envoie \( n \) et \( e \) à Léo.
-4. **Chiffrement du message** : Léo chiffre son message \( m \) en calculant \( m^e \mod n \) et envoie le résultat \( c \) à Léa.
-5. **Déchiffrement du message** : Léa déchiffre le message en calculant \( c^d \mod n \) pour obtenir \( m \).
+1. **Choix des nombres premiers** : Léa choisit un entier $n$ qui est décomposable en deux nombres premiers distincts $p$ et $q$.
+2. **Calcul des clés** : À partir de ces deux nombres, elle calcule $e$ qui est premier avec $(p-1)(q-1)$ et $d$, l'inverse modulaire de $e$.
+3. **Envoi des clés publiques** : Léa envoie $n$ et $e$ à Léo.
+4. **Chiffrement du message** : Léo chiffre son message $m$ en calculant $m^e \mod n$ et envoie le résultat $c$ à Léa.
+5. **Déchiffrement du message** : Léa déchiffre le message en calculant $c^d \mod n$ pour obtenir $m$.
 
 Léo et Léa ont ainsi réussi à s'envoyer des messages sans que personne ne puisse lire leur contenu !
 
@@ -30,7 +30,7 @@ Léo et Léa ont ainsi réussi à s'envoyer des messages sans que personne ne pu
 Un nombre premier est un nombre qui est divisible uniquement par 1 et par lui-même. Pour les trouver, il existe différentes méthodes :
 
 - **Crible d'Ératosthène** :
-  - Principe : Parcourir une liste de nombres de 2 à \( n \) et supprimer les multiples de chaque nombre premier trouvé.
+  - Principe : Parcourir une liste de nombres de 2 à $n$ et supprimer les multiples de chaque nombre premier trouvé.
   - Exemple :
     ```
     Liste initiale : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
@@ -41,15 +41,15 @@ Un nombre premier est un nombre qui est divisible uniquement par 1 et par lui-m�
 
 - **Test de Miller-Rabin** :
   - Principe : Utiliser des témoins pour vérifier si un nombre est premier.
-  - Formule : Si \( a^m \equiv 1 \mod n \) ou \( a^{2^j \cdot m} \equiv -1 \mod n \), alors \( n \) est probablement premier.
+  - Formule : Si $a^m \equiv 1 \mod n$ ou $a^{2^j \cdot m} \equiv -1 \mod n$, alors $n$ est probablement premier.
 
 En pratique le crible n'est pas utilisable pour RSA. En effet les entiers p et q sont trop grand et la liste qu'il faudrait faire est trop grande et trop longue à créer.
 De plus il suffit de peu de test pour être presque sur que un nombre est premier et c'est très rapide de prouver qu'il n'est pas premier. C'est donc bien plus efficace en pratique.
 
 ### Calcul des exposants de chiffrement e et de déchiffrement b
 
-1. **Indicatrice d'Euler** : \( \phi(n) = (p-1)(q-1) \).
-2. **Choix de \( e \)** : \( e \) doit être premier avec \( \phi(n) \).
+1. **Indicatrice d'Euler** : $\phi(n) = (p-1)(q-1)$.
+2. **Choix de $e$** : $e$ doit être premier avec $\phi(n)$.
 3. **Algorithme d'Euclide** pour trouver le PGCD :
     ```
     a = b * q + r
@@ -57,14 +57,14 @@ De plus il suffit de peu de test pour être presque sur que un nombre est premie
     a' = b' * q' + r'
     ```
     L'algorithme s'arrête quand le reste est nul, et le PGCD est le dernier reste non nul.
-4. **Algorithme d'Euclide étendu** pour trouver \( d \) :
-    - Trouver \( d \) tel que \( e \cdot d \equiv 1 \mod \phi(n) \).
+4. **Algorithme d'Euclide étendu** pour trouver $d$ :
+    - Trouver $d$ tel que $e \cdot d \equiv 1 \mod \phi(n)$.
 
 Top maintenant on sait comment faire pour trouver nos module mais il reste une question. C'est quoi cette indicatrice d'euler et pourquoi on s'en sert ?
 
 ### Théorème d'Euler
 
-Le théorème d'Euler nous dit que pour \( n \) premier et \( a \) premier avec \( n \), alors \( a^{\phi(n)} \equiv 1 \mod n \).
+Le théorème d'Euler nous dit que pour $n$ premier et $a$ premier avec $n$, alors $a^{\phi(n)} \equiv 1 \mod n$.
 
 - **Application à RSA** :
   \[
@@ -81,4 +81,4 @@ Le théorème d'Euler nous dit que pour \( n \) premier et \( a \) premier avec 
   m^{e \cdot d} \equiv m \mod n
   \]
 
-Et c'est donc grâce à ce théorème que nous pouvons prouver que, après avoir élevé le message à la puissance \( e \) puis \( d \), nous retrouvons bien le message d'origine !
+Et c'est donc grâce à ce théorème que nous pouvons prouver que, après avoir élevé le message à la puissance $e$ puis $d$, nous retrouvons bien le message d'origine !
