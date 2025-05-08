@@ -1,4 +1,4 @@
-//mod aes;
+mod aes;
 mod rsa;
 
 use std::process::exit;
