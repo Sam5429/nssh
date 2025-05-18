@@ -49,7 +49,7 @@ fn decypher_blocks(blocks: Vec<[u8; 16]>, expended_key: [u32; 44]) -> Vec<[u8; 1
         .collect()
 }
 
-fn message_cyphering(message: Vec<u8>, key: [u8; 16]) -> Vec<u8> {
+pub fn cypher_message(message: Vec<u8>, key: [u8; 16]) -> Vec<u8> {
     // Put the message in blocks of 16 bytes
     let mut blocks = bytes_to_blocks(message);
 
@@ -62,7 +62,7 @@ fn message_cyphering(message: Vec<u8>, key: [u8; 16]) -> Vec<u8> {
     bytes
 }
 
-fn message_decyphering(message: Vec<u8>, key: [u8; 16]) -> Vec<u8> {
+pub fn decypher_message(message: Vec<u8>, key: [u8; 16]) -> Vec<u8> {
     // Put the message in blocks of 16 bytes
     let mut blocks = bytes_to_blocks(message);
 
@@ -75,7 +75,7 @@ fn message_decyphering(message: Vec<u8>, key: [u8; 16]) -> Vec<u8> {
     bytes
 }
 
-fn string_to_key(key_string: &str) -> [u8; 16] {
+pub fn string_to_key(key_string: &str) -> [u8; 16] {
     let mut key = [0u8; 16];
 
     // Check if the key is too short
@@ -114,10 +114,10 @@ mod tests {
         }
 
         // Cypher the message
-        let cyphered_message = message_cyphering(message.as_bytes().to_vec(), key_bytes);
+        let cyphered_message = cypher_message(message.as_bytes().to_vec(), key_bytes);
 
         // Decypher the message
-        let decyphered_message = message_decyphering(cyphered_message, key_bytes);
+        let decyphered_message = decypher_message(cyphered_message, key_bytes);
 
         // Cut down the blocks to 8 bites
         assert_eq!(message.as_bytes().to_vec(), decyphered_message);
@@ -129,10 +129,10 @@ mod tests {
         let message = "test moi ça ma gueule, je veut te voir en maillot de bain";
 
         // Cypher the message
-        let cyphered_message = message_cyphering(message.as_bytes().to_vec(), key);
+        let cyphered_message = cypher_message(message.as_bytes().to_vec(), key);
 
         // Decypher the message
-        let decyphered_message = message_decyphering(cyphered_message, key);
+        let decyphered_message = decypher_message(cyphered_message, key);
 
         // Cut down the blocks to 8 bites
         assert_eq!(message.as_bytes().to_vec(), decyphered_message);
