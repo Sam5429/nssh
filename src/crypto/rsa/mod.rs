@@ -130,22 +130,16 @@ fn blocks_to_bytes(blocks: Vec<u32>) -> Vec<u8> {
     bytes
 }
 
-pub fn cypher_file(path: &str, key: PublicKey) {
-    let bytes = file_to_bytes(path);
+pub fn cypher_bytes(bytes: Vec<u8>, key: PublicKey) -> Vec<u8> {
     let blocks = bytes_to_blocks(bytes);
     let cyphered_blocks = cypher_blocks(blocks, key);
-    let cyphered_bytes = blocks_to_bytes(cyphered_blocks);
-    let new_path = path.replace(".txt", "_cypher.txt");
-    bytes_to_file(cyphered_bytes, new_path.as_str());
+    blocks_to_bytes(cyphered_blocks)
 }
 
-pub fn decypher_file(path: &str, key: PrivateKey) {
-    let bytes = file_to_bytes(path);
+pub fn decypher_bytes(bytes: Vec<u8>, key: PrivateKey) -> Vec<u8> {
     let blocks = bytes_to_blocks(bytes);
     let decyphered_blocks = decypher_blocks(blocks, key);
-    let decyphered_bytes = blocks_to_bytes(decyphered_blocks);
-    let new_path = path.replace("_cypher.txt", "_decypher.txt");
-    bytes_to_file(decyphered_bytes, new_path.as_str());
+    blocks_to_bytes(decyphered_blocks)
 }
 
 #[cfg(test)]
@@ -160,12 +154,14 @@ mod tests {
         let private_key = PrivateKey::new(56519, 43117, 1462098053, public_key.clone());
 
         // Act -> chiffre et déciffre un message
-
-        let blocks = bytes_to_blocks(message.as_bytes().to_vec());
-        let cyphered_blocks = cypher_blocks(blocks, public_key);
-        let decyphered_blocks = decypher_blocks(cyphered_blocks, private_key);
-        let decyphered_bytes = blocks_to_bytes(decyphered_blocks);
-        let decyphered_message = String::from_utf8(decyphered_bytes).unwrap();
+        let decyphered_message = String::from_utf8(decypher_bytes(
+            cypher_bytes(message.as_bytes().to_vec(), public_key),
+            private_key,
+        ))
+        .unwrap_or_else(|_| {
+            println!("{:?}", private_key);
+            String::new()
+        });
 
         // Assert -> vérifie si le message est le bon
         assert_eq!(message, decyphered_message);
@@ -180,11 +176,11 @@ mod tests {
         let private_key = PrivateKey::generate();
         let public_key = private_key.pub_key.clone();
 
-        let blocks = bytes_to_blocks(message.as_bytes().to_vec());
-        let cyphered_blocks = cypher_blocks(blocks, public_key);
-        let decyphered_blocks = decypher_blocks(cyphered_blocks, private_key);
-        let decyphered_bytes = blocks_to_bytes(decyphered_blocks);
-        let decyphered_message = String::from_utf8(decyphered_bytes).unwrap_or_else(|_| {
+        let decyphered_message = String::from_utf8(decypher_bytes(
+            cypher_bytes(message.as_bytes().to_vec(), public_key),
+            private_key,
+        ))
+        .unwrap_or_else(|_| {
             println!("{:?}", private_key);
             String::new()
         });
@@ -204,11 +200,11 @@ mod tests {
             let private_key = PrivateKey::generate();
             let public_key = private_key.pub_key.clone();
 
-            let blocks = bytes_to_blocks(message.as_bytes().to_vec());
-            let cyphered_blocks = cypher_blocks(blocks, public_key);
-            let decyphered_blocks = decypher_blocks(cyphered_blocks, private_key);
-            let decyphered_bytes = blocks_to_bytes(decyphered_blocks);
-            String::from_utf8(decyphered_bytes).unwrap_or_else(|_| {
+            String::from_utf8(decypher_bytes(
+                cypher_bytes(message.as_bytes().to_vec(), public_key),
+                private_key,
+            ))
+            .unwrap_or_else(|_| {
                 bad_key += 1;
                 String::new()
             });

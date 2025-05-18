@@ -171,17 +171,22 @@ fn add_round_key(state: &mut [[u8; 4]; 4], round_key: &[[u8; 4]; 4]) {
 // =====================
 
 /// Extract a round key from the expanded key
-fn extract_round_key(round_key: &mut [[u8; 4]; 4], k: i32, expanded_key: &[u32]) {
+fn extract_round_key(k: i32, expended_key: &[u32]) -> [[u8; 4]; 4] {
+    let mut round_key: [[u8; 4]; 4] = [[0u8; 4]; 4];
+
     for j in 0..4 {
-        round_key[0][j] = (expanded_key[(4 * k + j as i32) as usize] >> 24) as u8;
-        round_key[1][j] = (expanded_key[(4 * k + j as i32) as usize] >> 16) as u8;
-        round_key[2][j] = (expanded_key[(4 * k + j as i32) as usize] >> 8) as u8;
-        round_key[3][j] = expanded_key[(4 * k + j as i32) as usize] as u8;
+        round_key[0][j] = (expended_key[(4 * k + j as i32) as usize] >> 24) as u8;
+        round_key[1][j] = (expended_key[(4 * k + j as i32) as usize] >> 16) as u8;
+        round_key[2][j] = (expended_key[(4 * k + j as i32) as usize] >> 8) as u8;
+        round_key[3][j] = expended_key[(4 * k + j as i32) as usize] as u8;
     }
+
+    round_key
 }
 
 /// Expand the key to generate the round keys
-fn key_expansion(key: [u8; 16], expanded_key: &mut [u32]) {
+pub fn key_expansion(key: [u8; 16]) -> [u32; 44] {
+    let mut expanded_key: [u32; 44] = [0; 44];
     let mut temp: u32;
 
     // First 4 words are obtained by concatenating bytes from the key
@@ -194,41 +199,57 @@ fn key_expansion(key: [u8; 16], expanded_key: &mut [u32]) {
 
     for i in 4..44 {
         temp = expanded_key[i - 1];
+        // Create the first word of the new key
         if i % 4 == 0 {
             let mut power = 1;
+            // Know that it's the nth key
             for _ in 1..i / 4 {
                 power = prod(2, power);
             }
-            let x_3 = temp;
-            let x_2 = temp >> 8;
-            let mut x_1 = temp >> 16;
-            x_1 = (power ^ S[x_1 as usize]) as u32;
-            let x_0 = temp >> 24;
-            temp = x_1;
+            let x_3 = (temp) as u8;
+            let x_2 = (temp >> 8) as u8;
+            let mut x_1 = (temp >> 16) as u8;
+            x_1 = (power ^ S[x_1 as usize]) as u8;
+            let x_0 = (temp >> 24) as u8;
+            temp = x_1 as u32;
             temp = temp << 8 | S[x_2 as usize] as u32;
             temp = temp << 8 | S[x_3 as usize] as u32;
             temp = temp << 8 | S[x_0 as usize] as u32;
         }
         expanded_key[i] = expanded_key[i - 4] ^ temp;
     }
+
+    expanded_key
 }
 
+// ====================
+// Block Management
+// ====================
+
 /// Convert input block to state matrix
-fn make_state(input: [u8; 16], state: &mut [[u8; 4]; 4]) {
+fn make_state(input: [u8; 16]) -> [[u8; 4]; 4] {
+    let mut state = [[0u8; 4]; 4];
+
     for j in 0..4 {
         for i in 0..4 {
             state[i][j] = input[4 * j + i];
         }
     }
+
+    state
 }
 
 /// Convert state matrix to output block
-fn make_block(state: [[u8; 4]; 4], output: &mut [u8; 16]) {
+fn make_block(state: [[u8; 4]; 4]) -> [u8; 16] {
+    let mut output: [u8; 16] = [0; 16];
+
     for j in 0..4 {
         for i in 0..4 {
             output[4 * j + i] = state[i][j];
         }
     }
+
+    output
 }
 
 // ====================
@@ -236,51 +257,47 @@ fn make_block(state: [[u8; 4]; 4], output: &mut [u8; 16]) {
 // ====================
 
 /// Encrypt a block of data
-fn encrypt(input: [u8; 16], output: &mut [u8; 16], expanded_key: &[u32]) {
-    let mut round_key = [[0u8; 4]; 4];
-    let mut state = [[0u8; 4]; 4];
+pub fn cypher(input: [u8; 16], expended_key: &[u32]) -> [u8; 16] {
+    let mut round_key = extract_round_key(0, expended_key);
+    let mut state = make_state(input);
 
-    make_state(input, &mut state);
-    extract_round_key(&mut round_key, 10, expanded_key);
     add_round_key(&mut state, &round_key);
 
-    for i in (1..10).rev() {
-        shift_rows(&mut state);
+    for i in 1..10 {
         sub_bytes(&mut state);
-        extract_round_key(&mut round_key, i, expanded_key);
-        add_round_key(&mut state, &round_key);
+        shift_rows(&mut state);
         mix_columns(&mut state);
+        round_key = extract_round_key(i, expended_key);
+        add_round_key(&mut state, &round_key);
     }
 
-    shift_rows(&mut state);
     sub_bytes(&mut state);
-    extract_round_key(&mut round_key, 0, expanded_key);
+    shift_rows(&mut state);
+    round_key = extract_round_key(10, expended_key);
     add_round_key(&mut state, &round_key);
 
-    make_block(state, output);
+    make_block(state)
 }
 
 /// Decrypt a block of data
-fn decrypt(input: [u8; 16], output: &mut [u8; 16], expanded_key: &[u32]) {
-    let mut round_key = [[0u8; 4]; 4];
-    let mut state = [[0u8; 4]; 4];
+pub fn decypher(input: [u8; 16], expended_key: &[u32]) -> [u8; 16] {
+    let mut round_key = extract_round_key(10, expended_key);
+    let mut state = make_state(input);
 
-    make_state(input, &mut state);
-    extract_round_key(&mut round_key, 10, expanded_key);
     add_round_key(&mut state, &round_key);
 
     for i in (1..10).rev() {
         inv_shift_rows(&mut state);
         inv_sub_bytes(&mut state);
-        extract_round_key(&mut round_key, i, expanded_key);
+        round_key = extract_round_key(i, expended_key);
         add_round_key(&mut state, &round_key);
         inv_mix_columns(&mut state);
     }
 
     inv_shift_rows(&mut state);
     inv_sub_bytes(&mut state);
-    extract_round_key(&mut round_key, 0, expanded_key);
+    round_key = extract_round_key(0, expended_key);
     add_round_key(&mut state, &round_key);
 
-    make_block(state, output);
+    make_block(state)
 }
