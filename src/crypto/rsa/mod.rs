@@ -42,22 +42,31 @@ impl PrivateKey {
 
     /// Generate a new private key with a public key
     pub fn generate() -> Self {
-        let mut p = mr_prime(16, 0.9);
-        let mut q = mr_prime(16, 0.9);
-        // have to find a n that have 32 binary numbers
+        let mut private_key = PrivateKey {
+            p: 0,
+            q: 0,
+            d: 0,
+            pub_key: PublicKey { n: 0, e: 0 },
+        };
+
+        private_key.p = mr_prime(16, 0.9);
+        private_key.q = mr_prime(16, 0.9);
+
+        // Ensure n has 32 binary numbers
         loop {
-            if (p * q) >> 31 == 1 {
+            if (private_key.p * private_key.q) >> 31 == 1 {
                 break;
             }
-            p = mr_prime(16, 0.9);
-            q = mr_prime(16, 0.9);
+            private_key.p = mr_prime(16, 0.9);
+            private_key.q = mr_prime(16, 0.9);
         }
-        let n = (p * q) as u32;
-        let phi_n = (p - 1) * (q - 1);
-        let e = find_coprime(phi_n);
-        let d = modular_inv(e, phi_n);
-        let pub_key = PublicKey::new(n, e);
-        PrivateKey { p, q, d, pub_key }
+
+        private_key.pub_key.n = (private_key.p * private_key.q) as u32;
+        let phi_n = (private_key.p - 1) * (private_key.q - 1);
+        private_key.pub_key.e = find_coprime(phi_n);
+        private_key.d = modular_inv(private_key.pub_key.e, phi_n);
+
+        private_key
     }
 }
 
@@ -81,16 +90,8 @@ fn decypher_blocks(blocks: Vec<u32>, key: PrivateKey) -> Vec<u32> {
 }
 
 /*********************************
-*		 File manipulation	 	 *
+*		 Message manipulation	 *
 **********************************/
-
-pub fn file_to_bytes(path: &str) -> Vec<u8> {
-    fs::read(path).unwrap()
-}
-
-pub fn bytes_to_file(bytes: Vec<u8>, path: &str) {
-    fs::write(path, bytes).unwrap()
-}
 
 fn bytes_to_blocks(bytes: Vec<u8>) -> Vec<u32> {
     bytes
@@ -130,14 +131,14 @@ fn blocks_to_bytes(blocks: Vec<u32>) -> Vec<u8> {
     bytes
 }
 
-pub fn cypher_bytes(bytes: Vec<u8>, key: PublicKey) -> Vec<u8> {
-    let blocks = bytes_to_blocks(bytes);
+pub fn cypher_message(message: Vec<u8>, key: PublicKey) -> Vec<u8> {
+    let blocks = bytes_to_blocks(message);
     let cyphered_blocks = cypher_blocks(blocks, key);
     blocks_to_bytes(cyphered_blocks)
 }
 
-pub fn decypher_bytes(bytes: Vec<u8>, key: PrivateKey) -> Vec<u8> {
-    let blocks = bytes_to_blocks(bytes);
+pub fn decypher_message(message: Vec<u8>, key: PrivateKey) -> Vec<u8> {
+    let blocks = bytes_to_blocks(message);
     let decyphered_blocks = decypher_blocks(blocks, key);
     blocks_to_bytes(decyphered_blocks)
 }
@@ -154,8 +155,8 @@ mod tests {
         let private_key = PrivateKey::new(56519, 43117, 1462098053, public_key.clone());
 
         // Act -> chiffre et déciffre un message
-        let decyphered_message = String::from_utf8(decypher_bytes(
-            cypher_bytes(message.as_bytes().to_vec(), public_key),
+        let decyphered_message = String::from_utf8(decypher_message(
+            cypher_message(message.as_bytes().to_vec(), public_key),
             private_key,
         ))
         .unwrap_or_else(|_| {
@@ -176,8 +177,8 @@ mod tests {
         let private_key = PrivateKey::generate();
         let public_key = private_key.pub_key.clone();
 
-        let decyphered_message = String::from_utf8(decypher_bytes(
-            cypher_bytes(message.as_bytes().to_vec(), public_key),
+        let decyphered_message = String::from_utf8(decypher_message(
+            cypher_message(message.as_bytes().to_vec(), public_key),
             private_key,
         ))
         .unwrap_or_else(|_| {
@@ -200,8 +201,8 @@ mod tests {
             let private_key = PrivateKey::generate();
             let public_key = private_key.pub_key.clone();
 
-            String::from_utf8(decypher_bytes(
-                cypher_bytes(message.as_bytes().to_vec(), public_key),
+            String::from_utf8(decypher_message(
+                cypher_message(message.as_bytes().to_vec(), public_key),
                 private_key,
             ))
             .unwrap_or_else(|_| {

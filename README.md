@@ -12,3 +12,15 @@ Vous trouverez ici la vulgarisation de RSA (**mettre le liens**) et de AES (**me
 
 1. **Vulgarisation** : Le but c'est d'apprendre à vulgariser des concepts mathématiques et informatiques.
 2. **Apprendre le rust** : Faire un projet pour mettre en pratique un peu de rust.
+
+## Archi
+
+Pour le module crypto.
+Il y a deux modules :
+- `rsa` : qui gère la partie RSA
+- `aes` : qui gère la partie AES
+Chacun de ces modules est divisé en deux parties :
+- mod qui fait la gestion des clés.
+- arithm qui gère la partie plus mathématique.
+
+et au dessus il y a mod qui gère le chiffrement d'un message

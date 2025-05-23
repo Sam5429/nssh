@@ -25,7 +25,7 @@ fn bezout(mut a: u32, mut b: u32) -> CoefEb {
     let mut v1: i32 = 1;
     let mut v2: i32 = 0;
 
-    reste = a % b;
+    reste = coef_eb.a % coef_eb.b;
     while reste != 0 {
         u = u2 - (a / b) as i32 * u1;
         v = v2 - (a / b) as i32 * v1;

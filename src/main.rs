@@ -14,13 +14,13 @@ fn main() {
     let session_key = "qdmfQSDfkqldfqdfm mq"; // The session key to be sent and use for AES
 
     // Encrypt the session key with the public key (server side)
-    let encrypted_session_key = rsa::cypher_bytes(session_key.as_bytes().to_vec(), public_key);
+    let encrypted_session_key = rsa::cypher_message(session_key.as_bytes().to_vec(), public_key);
 
     // Sent the encrypted session key to the receiver with the public key
 
     // Decrypt the session key with the private key
     let decrypted_session_key = aes::string_to_key(
-        String::from_utf8(rsa::decypher_bytes(
+        String::from_utf8(rsa::decypher_message(
             encrypted_session_key,
             private_key.clone(),
         ))
