@@ -1,7 +1,5 @@
 mod arithm;
 
-use std::fs::{self};
-
 use arithm::{fast_exp, find_coprime, modular_inv, mr_prime};
 
 /***********************************
@@ -10,8 +8,8 @@ use arithm::{fast_exp, find_coprime, modular_inv, mr_prime};
 
 #[derive(Debug, Clone, Copy)]
 pub struct PublicKey {
-    n: u32, // public module
-    e: u32, // cypher exposant
+    pub n: u32, // public module
+    pub e: u32, // cypher exposant
 }
 
 impl PublicKey {
@@ -24,6 +22,12 @@ impl PublicKey {
             n: self.n,
             e: self.e,
         }
+    }
+    pub fn as_bytes(&self) -> Vec<u8> {
+        let mut bytes = Vec::with_capacity(8);
+        bytes.extend_from_slice(&self.n.to_be_bytes());
+        bytes.extend_from_slice(&self.e.to_be_bytes());
+        bytes
     }
 }
 
