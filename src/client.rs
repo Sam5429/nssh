@@ -1,43 +1,28 @@
 use std::io::{self, Read, Write};
 use std::net::TcpStream;
 
+use crate::crypto::aes;
 use crate::crypto::rsa;
 
 pub fn connect_and_communicate() -> io::Result<()> {
     let mut stream = TcpStream::connect("127.0.0.1:7878")?;
     let mut buffer = [0; 512];
     let private_key = rsa::PrivateKey::generate();
+    println!("Private Key: {:?}", private_key);
 
     // envoie la clé public au serveur
-    println!("{:?}", private_key.pub_key);
-
     stream.write_all(&private_key.pub_key.as_bytes())?;
 
     // récup la clé public de l'autre plus la clé aes
     stream.read(&mut buffer).unwrap();
 
     // déchiffre avec sa clé privé
-    let decyphered_message = rsa::decypher_message(Vec::from(buffer), private_key);
+    let aes_key: [u8; 16] = rsa::decypher_message(Vec::from(buffer), private_key)
+        .try_into()
+        .unwrap();
 
-    let n = u32::from_be_bytes([
-        decyphered_message[0],
-        decyphered_message[1],
-        decyphered_message[2],
-        decyphered_message[3],
-    ]);
-    let e = u32::from_be_bytes([
-        decyphered_message[4],
-        decyphered_message[5],
-        decyphered_message[6],
-        decyphered_message[7],
-    ]);
-    let pub_key = rsa::PublicKey::new(n, e);
-
-    let aes_key = Vec::from(&decyphered_message[8..]);
-    let aes_key_str = String::from_utf8_lossy(&aes_key);
     println!("Received :");
-    println!("AES Key: {}", aes_key_str);
-    println!("{:?}\n{:?}", n, e);
+    println!("AES Key: {:?}", aes_key);
 
     loop {
         print!("Enter message: ");
@@ -50,9 +35,11 @@ pub fn connect_and_communicate() -> io::Result<()> {
             break;
         }
 
-        stream.write_all(input.as_bytes())?;
-        let bytes_read = stream.read(&mut buffer)?;
-        let response = String::from_utf8_lossy(&buffer[..bytes_read]);
+        let crypted_input = aes::cypher_message(Vec::from(input), aes_key);
+        stream.write(&crypted_input).unwrap();
+        let bytes_read = stream.read(&mut buffer).unwrap();
+        let decypher_request = aes::decypher_message(Vec::from(&buffer[..bytes_read]), aes_key);
+        let response = String::from_utf8(decypher_request).unwrap();
         println!("Server response: {}", response);
     }
 

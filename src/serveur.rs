@@ -1,3 +1,4 @@
+use super::crypto::aes;
 use super::crypto::rsa;
 use rand::Rng;
 use std::io::{Read, Write};
@@ -32,28 +33,18 @@ fn handle_client(mut stream: TcpStream, private_key: Arc<rsa::PrivateKey>) {
     println!("Received public key: {:?}", pub_key);
 
     // généré la clé aes
-    let aes_key = generate_random_string(16);
-    println!("{}", aes_key);
-    println!("public key : {:?}", private_key);
+    let aes_key: [u8; 16] = generate_random_string(16).as_bytes().try_into().unwrap();
+    println!("aes key : {:?}", aes_key);
 
-    // concatène les infos
-    let mut message = private_key.pub_key.as_bytes();
-    message.extend_from_slice(&mut aes_key.as_bytes());
-
-    // envoie les infos
-
-    let cyphered_message = rsa::cypher_message(message, pub_key);
+    let cyphered_message = rsa::cypher_message(Vec::from(aes_key), pub_key);
     stream.write_all(&cyphered_message).unwrap();
-
-    // étape 1: recevoir la clé public du client
-
-    // étape 2: utiliser la clé du client pour envoyé ta clé public ainsi que la clé aes
 
     // étape 3: communiquer avec aes
     loop {
-        let mut buffer = [0; 512];
-        stream.read(&mut buffer).unwrap();
-        let request = String::from_utf8_lossy(&buffer[..]);
+        let mut buffer = [0; 1024];
+        let bytes_read = stream.read(&mut buffer).unwrap();
+        let decypher_request = aes::decypher_message(Vec::from(&buffer[..bytes_read]), aes_key);
+        let request = String::from_utf8(decypher_request).unwrap();
 
         println!("Received request: {}", request);
 
@@ -62,7 +53,9 @@ fn handle_client(mut stream: TcpStream, private_key: Arc<rsa::PrivateKey>) {
         }
 
         let response = "HTTP/1.1 200 OK\n\nHello, world!";
-        stream.write(response.as_bytes()).unwrap();
+        stream
+            .write(&aes::cypher_message(Vec::from(response), aes_key))
+            .unwrap();
         stream.flush().unwrap();
     }
 }
@@ -70,6 +63,8 @@ fn handle_client(mut stream: TcpStream, private_key: Arc<rsa::PrivateKey>) {
 pub fn launch() {
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
     let private_key = Arc::new(rsa::PrivateKey::generate());
+    println!("Server is running on");
+    println!("Private Key: {:?}", private_key);
 
     for stream in listener.incoming() {
         match stream {
