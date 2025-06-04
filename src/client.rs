@@ -3,6 +3,7 @@ use crate::crypto::rsa;
 use rand::Rng;
 use std::io::{self, Read, Write};
 use std::net::TcpStream;
+use std::str::FromStr;
 
 /// Generate a random string containing letters and digits.
 /// args:
@@ -19,6 +20,29 @@ fn generate_random_string(length: usize) -> String {
             CHARSET[idx] as char
         })
         .collect()
+}
+
+/// Send a string to a client by a stream using aes to cypher the string
+fn send(stream: &mut TcpStream, message: String, aes_key: [u8; 16]) -> io::Result<()> {
+    // Encrypt the message using AES
+    let encrypted_message = aes::cypher_message(Vec::from(message), aes_key);
+
+    // Send the encrypted message over the stream
+    stream.write_all(&encrypted_message)?;
+    Ok(())
+}
+
+/// Receive a cyphered string and decypher it before returning a string
+fn receive(stream: &mut TcpStream, aes_key: [u8; 16]) -> io::Result<String> {
+    // Read the encrypted message from the stream
+    let mut buffer = [0; 1024];
+    let bytes_read = stream.read(&mut buffer)?;
+
+    // Decrypt the message using AES
+    let decrypted_message = aes::decypher_message(Vec::from(&buffer[..bytes_read]), aes_key);
+
+    // Convert the decrypted message to a String
+    String::from_utf8(decrypted_message).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
 }
 
 pub fn connect_and_communicate() -> io::Result<()> {
@@ -59,24 +83,56 @@ pub fn connect_and_communicate() -> io::Result<()> {
     println!("server aes key : {:?}", server_aes_key);
 
     // assemble the two part of the aes key
-    let mut aes_session_key = server_aes_key;
-    aes_session_key.push_str(&client_aes_key);
+    let aes_session_key = format!("{}{}", server_aes_key, client_aes_key);
+    let aes_session_key: [u8; 16] = aes_session_key
+        .as_bytes()
+        .try_into()
+        .expect("AES session key must be 16 bytes");
     println!("server public key : {:?}", server_pub_key);
     println!("aes session key : {:?}", aes_session_key);
 
     // =======================================
     // Authentification
     // =======================================
-    
+
+    // receive the figerprint of the server
+    // and simulate the search in the known host
+    let known_host = Vec::new();
+    let fingerprint = receive(&mut stream, aes_session_key)?;
+    if !known_host.contains(&fingerprint) {
+        println!("Warning: unknown host, trust it ? Y/N");
+
+        let mut answer = String::new();
+        io::stdin()
+            .read_line(&mut answer)
+            .expect("failed to read the answer");
+        if answer.trim() != "Y" {
+            send(
+                &mut stream,
+                String::from_str("KO").unwrap(),
+                aes_session_key,
+            )?;
+            return Ok(());
+        }
+    }
+
+    // get the login and the password and send it to the server
     let mut login = String::new();
     let mut password = String::new();
 
     println!("login: ");
-    io::stdin().read_line(&mut login).expect("failed to read the login");
+    io::stdin()
+        .read_line(&mut login)
+        .expect("failed to read the login");
     println!("password: ");
-    io::stdin().read_line(&mut password).expect("failed to read the password");
-    let message = format!("{}\n{}", login, password);
+    io::stdin()
+        .read_line(&mut password)
+        .expect("failed to read the password");
+    let message = format!("{}\n{}", login.trim(), password.trim());
+    send(&mut stream, message, aes_session_key)?;
 
+    let response = receive(&mut stream, aes_session_key)?;
+    println!("{response}");
     // Read the public key of the server
     // let mut rsa_public_key_buff = [0,8];
     // stream.read(&mut rsa_public_key_buff).unwrap();
