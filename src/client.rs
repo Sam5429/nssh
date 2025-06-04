@@ -58,8 +58,6 @@ pub fn connect_and_communicate() -> io::Result<()> {
     // generate a rsa session key + 8 char long string for aes
     let rsa_session_key = rsa::PrivateKey::generate();
     let client_aes_key = generate_random_string(8);
-    println!("private key : {:?}", rsa_session_key);
-    println!("aes key : {:?}", client_aes_key);
 
     // send the rsa public key
     stream.write_all(&rsa_session_key.pub_key.as_bytes())?;
@@ -80,7 +78,6 @@ pub fn connect_and_communicate() -> io::Result<()> {
     stream.read(&mut buffer).unwrap();
     let buffer = rsa::decypher_message(buffer.to_vec(), rsa_session_key);
     let server_aes_key = String::from_utf8(buffer).unwrap();
-    println!("server aes key : {:?}", server_aes_key);
 
     // assemble the two part of the aes key
     let aes_session_key = format!("{}{}", server_aes_key, client_aes_key);
@@ -88,8 +85,6 @@ pub fn connect_and_communicate() -> io::Result<()> {
         .as_bytes()
         .try_into()
         .expect("AES session key must be 16 bytes");
-    println!("server public key : {:?}", server_pub_key);
-    println!("aes session key : {:?}", aes_session_key);
 
     // =======================================
     // Authentification
@@ -120,11 +115,13 @@ pub fn connect_and_communicate() -> io::Result<()> {
     let mut login = String::new();
     let mut password = String::new();
 
-    println!("login: ");
+    print!("login: ");
+    io::stdout().flush().expect("failed to flush stdout");
     io::stdin()
         .read_line(&mut login)
         .expect("failed to read the login");
-    println!("password: ");
+    print!("password: ");
+    io::stdout().flush().expect("failed to flush stdout");
     io::stdin()
         .read_line(&mut password)
         .expect("failed to read the password");
@@ -132,64 +129,35 @@ pub fn connect_and_communicate() -> io::Result<()> {
     send(&mut stream, message, aes_session_key)?;
 
     let response = receive(&mut stream, aes_session_key)?;
-    println!("{response}");
-    // Read the public key of the server
-    // let mut rsa_public_key_buff = [0,8];
-    // stream.read(&mut rsa_public_key_buff).unwrap();
-    // let n = u32::from_be_bytes(rsa_public_key_buff[..4]);
-    // let e = u32::from_be_bytes(rsa_public_key_buff[4..8]);
-    // let server_public_key = rsa::PublicKey::new(n, e);
+    if response != "connected" {
+        println!("Login or password unknown");
+        return Ok(());
+    }
 
-    // // tcheck if the host if known
-    // let known_host: Vec<rsa::PublicKey>= Vec::new();
-    // if !known_host.contains(&server_public_key) {
-    //     println!("Unknown host are you trusting this server: {}", stream.local_addr().unwrap());
-    //     let mut answer = String::new();
-    //     io::stdin().read_line(&mut answer).expect("failed to read the answer");
-    //     if answer == "Y" {
-    //         known_host.append(&server_public_key);
-    //     } else {
-    //         return Ok(());
-    //     }
-    // }
+    // ========================================
+    // Main communication loop
+    // ========================================
 
-    // // ===========================================
-    // // Get the aes key to start the crypted communication
-    // // ===========================================
+    loop {
+        // Read the command
+        print!("command: ");
+        io::stdout().flush().expect("failed to flush stdout");
+        let mut command = String::new();
+        io::stdin()
+            .read_line(&mut command)
+            .expect("failed to read the command");
 
-    // // ==========================================
-    // // Identification of the user
-    // // ============================================
+        // send the command to the server
+        send(&mut stream, command.clone(), aes_session_key)?;
 
-    // // récup la clé public de l'autre plus la clé aes
-    // stream.read(&mut buffer).unwrap();
+        // print the server answer
+        let answer = receive(&mut stream, aes_session_key)?;
+        println!("{answer}");
 
-    // // déchiffre avec sa clé privé
-    // let aes_key: [u8; 16] = rsa::decypher_message(Vec::from(buffer), private_key)
-    //     .try_into()
-    //     .unwrap();
-
-    // println!("Received :");
-    // println!("AES Key: {:?}", aes_key);
-
-    // loop {
-    //     print!("Enter message: ");
-    //     io::stdout().flush()?;
-
-    //     let mut input = String::new();
-    //     io::stdin().read_line(&mut input)?;
-
-    //     if input.trim() == "exit" {
-    //         break;
-    //     }
-
-    //     let crypted_input = aes::cypher_message(Vec::from(input), aes_key);
-    //     stream.write(&crypted_input).unwrap();
-    //     let bytes_read = stream.read(&mut buffer).unwrap();
-    //     let decypher_request = aes::decypher_message(Vec::from(&buffer[..bytes_read]), aes_key);
-    //     let response = String::from_utf8(decypher_request).unwrap();
-    //     println!("Server response: {}", response);
-    // }
+        if command.trim() == "exit" {
+            break;
+        }
+    }
 
     Ok(())
 }

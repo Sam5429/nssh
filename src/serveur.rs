@@ -52,7 +52,9 @@ fn receive(stream: &mut TcpStream, aes_key: [u8; 16]) -> io::Result<String> {
 /// Use by thread to communicate with one client
 /// args:
 ///     :stream: the stream to communicate with the client
-fn handle_client(mut stream: TcpStream) -> io::Result<()> {
+fn handle_client(mut stream: TcpStream) -> io::Result<std::net::SocketAddr> {
+    let addr = stream.peer_addr().unwrap();
+    println!("connection received: {}", addr);
     // ===================================
     // Hand shake
     // ===================================
@@ -60,8 +62,6 @@ fn handle_client(mut stream: TcpStream) -> io::Result<()> {
     // generate a rsa session key + 8 char long string for aes
     let rsa_session_key = rsa::PrivateKey::generate();
     let server_aes_key = generate_random_string(8);
-    println!("private key : {:?}", rsa_session_key);
-    println!("aes key : {:?}", server_aes_key);
 
     // send the rsa public key
     stream.write_all(&rsa_session_key.pub_key.as_bytes())?;
@@ -89,9 +89,7 @@ fn handle_client(mut stream: TcpStream) -> io::Result<()> {
         .as_bytes()
         .try_into()
         .expect("AES session key must be 16 bytes");
-    println!("client public key : {:?}", client_pub_key);
-    println!("client aes key : {:?}", client_aes_key);
-    println!("aes session key : {:?}", aes_session_key);
+    println!("tunel up");
 
     // ==============================================
     // Authentification
@@ -104,10 +102,9 @@ fn handle_client(mut stream: TcpStream) -> io::Result<()> {
     // receive ko if the connection is refused
     // receive login and password if the connection is accepted
     let response = receive(&mut stream, aes_session_key)?;
-    println!("{response}");
     if response == "KO" {
         stream.shutdown(Shutdown::Both)?;
-        return Ok(());
+        return Ok(addr);
     } else {
         let user_data = response.split("\n").collect::<Vec<&str>>();
         if user_data[0] != "admin" || user_data[1] != "admin" {
@@ -116,46 +113,66 @@ fn handle_client(mut stream: TcpStream) -> io::Result<()> {
                 String::from_str("login or password unknown").unwrap(),
                 aes_session_key,
             )?;
-            return Ok(());
+            stream.shutdown(Shutdown::Both)?;
+            return Ok(addr);
         }
     }
 
     send(
         &mut stream,
-        String::from_str("OK").unwrap(),
+        String::from_str("connected").unwrap(),
         aes_session_key,
     )?;
 
-    // receive the client info
+    println!("Client authenticated successfully");
 
-    Ok(())
+    // ========================================
+    // Main communication loop
+    // ========================================
 
-    // généré la clé aes
-    // let aes_key: [u8; 16] = generate_random_string(16).as_bytes().try_into().unwrap();
-    // println!("aes key : {:?}", aes_key);
+    loop {
+        // Receive a command from the client
+        let command = match receive(&mut stream, aes_session_key) {
+            Ok(cmd) => cmd.trim().to_string(),
+            Err(_) => {
+                break;
+            }
+        };
 
-    // let cyphered_message = rsa::cypher_message(Vec::from(aes_key), pub_key);
-    // stream.write_all(&cyphered_message).unwrap();
+        if command == "exit" {
+            break;
+        }
 
-    // // étape 3: communiquer avec aes
-    // loop {
-    //     let mut buffer = [0; 1024];
-    //     let bytes_read = stream.read(&mut buffer).unwrap();
-    //     let decypher_request = aes::decypher_message(Vec::from(&buffer[..bytes_read]), aes_key);
-    //     let request = String::from_utf8(decypher_request).unwrap();
+        // Execute the command
+        let output = std::process::Command::new("sh")
+            .arg("-c")
+            .arg(&command)
+            .output();
 
-    //     println!("Received request: {}", request);
+        let response = match output {
+            Ok(output) => {
+                let mut resp = String::new();
+                if !output.stdout.is_empty() {
+                    resp.push_str(&String::from_utf8_lossy(&output.stdout));
+                }
+                if !output.stderr.is_empty() {
+                    resp.push_str(&String::from_utf8_lossy(&output.stderr));
+                }
+                if resp.is_empty() {
+                    resp = String::from("Command executed, but no output.");
+                }
+                resp
+            }
+            Err(e) => format!("Failed to execute command: {}", e),
+        };
 
-    //     if request.trim() == "exit" {
-    //         break;
-    //     }
+        // Send the response back to the client
+        if let Err(_) = send(&mut stream, response, aes_session_key) {
+            break;
+        }
+    }
 
-    //     let response = "HTTP/1.1 200 OK\n\nHello, world!";
-    //     stream
-    //         .write(&aes::cypher_message(Vec::from(response), aes_key))
-    //         .unwrap();
-    //     stream.flush().unwrap();
-    // }
+    Ok(addr)
 }
 
 pub fn launch() {
@@ -165,8 +182,9 @@ pub fn launch() {
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
-                thread::spawn(|| {
-                    handle_client(stream);
+                thread::spawn(|| match handle_client(stream) {
+                    Ok(addr) => println!("Client {} disconnected", addr),
+                    Err(e) => eprintln!("Error handling client: {}", e),
                 });
             }
             Err(e) => {
