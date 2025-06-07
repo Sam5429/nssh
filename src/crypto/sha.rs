@@ -86,13 +86,12 @@ fn add32(a: u32, b: u32) -> u32 {
     a.wrapping_add(b)
 }
 
-fn sha256(message: Vec<u8>) -> [u32; 8] {
+pub fn sha256(message: Vec<u8>) -> [u32; 8] {
     let message = parse_message(message);
     let mut hash: [u32; 8] = [
         0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab,
         0x5be0cd19,
     ];
-    println!("Initial message: {:?}", message);
 
     for message_bloc in message {
         let mut w: [u32; 64] = [0; 64];
@@ -128,10 +127,6 @@ fn sha256(message: Vec<u8>) -> [u32; 8] {
             c = b;
             b = a;
             a = add32(tmp1, tmp2);
-            println!(
-                "t={:2}: a={:08x} b={:08x} c={:08x} d={:08x} e={:08x} f={:08x} g={:08x} h={:08x}",
-                t, a, b, c, d, e, f, g, h
-            );
         }
 
         hash[0] = add32(a, hash[0]);

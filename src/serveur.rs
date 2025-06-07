@@ -2,6 +2,7 @@ use crate::rsa::PrivateKey;
 
 use super::crypto::aes;
 use super::crypto::rsa;
+use super::crypto::sha;
 use rand::Rng;
 use std::io::{self, Read, Write};
 use std::net::Shutdown;
@@ -28,11 +29,24 @@ fn generate_random_string(length: usize) -> String {
 
 /// Send a string to a client by a stream using aes to cypher the string
 fn send(stream: &mut TcpStream, message: String, aes_key: [u8; 16]) -> io::Result<()> {
-    // Encrypt the message using AES
-    let encrypted_message = aes::cypher_message(Vec::from(message), aes_key);
+    let mut buff = [0; 2];
 
-    // Send the encrypted message over the stream
+    // Send the message
+    let encrypted_message = aes::cypher_message(Vec::from(message.clone()), aes_key);
     stream.write_all(&encrypted_message)?;
+    stream.read(&mut buff)?; // Tempo so that the server can read the message and not block
+
+    // Send the hash of the concatenation of the message and the aes_key
+    let mut message_and_key = Vec::from(message.as_bytes());
+    message_and_key.extend_from_slice(&aes_key);
+
+    let hash_u32 = sha::sha256(message_and_key);
+    let mut hash = Vec::with_capacity(hash_u32.len() * 4);
+    hash_u32.iter().for_each(|h| {
+        hash.extend_from_slice(&h.to_be_bytes());
+    });
+    stream.write_all(&hash)?;
+
     Ok(())
 }
 
@@ -41,12 +55,36 @@ fn receive(stream: &mut TcpStream, aes_key: [u8; 16]) -> io::Result<String> {
     // Read the encrypted message from the stream
     let mut buffer = [0; 1024];
     let bytes_read = stream.read(&mut buffer)?;
+    stream.write_all("OK".as_bytes())?;
 
     // Decrypt the message using AES
     let decrypted_message = aes::decypher_message(Vec::from(&buffer[..bytes_read]), aes_key);
+    let message = String::from_utf8(decrypted_message.clone())
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e));
 
-    // Convert the decrypted message to a String
-    String::from_utf8(decrypted_message).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+    // Read the hash from the stream
+    let mut hash_buffer = [0; 32]; // SHA-256 produces a 32-byte hash
+    stream.read(&mut hash_buffer)?;
+
+    // Create the expected hash from the decrypted message
+    let mut message_and_key = Vec::from(message.as_ref().unwrap().as_bytes());
+    message_and_key.extend_from_slice(&aes_key);
+    let expected_hash = sha::sha256(message_and_key);
+
+    // Compare the two hashes to see if they are identical
+    let mut expected_hash_bytes: Vec<u8> = Vec::with_capacity(expected_hash.len() * 4);
+    expected_hash.iter().for_each(|h| {
+        expected_hash_bytes.extend_from_slice(&h.to_be_bytes());
+    });
+
+    if expected_hash_bytes != hash_buffer {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Hash verification failed",
+        ));
+    }
+
+    message
 }
 
 /// Use by thread to communicate with one client
