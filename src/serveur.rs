@@ -97,9 +97,9 @@ fn handle_client(mut stream: TcpStream) -> io::Result<std::net::SocketAddr> {
     // Hand shake
     // ===================================
 
-    // generate a rsa session key + 8 char long string for aes
+    // generate a rsa session key + 16 char long string for aes
     let rsa_session_key = rsa::PrivateKey::generate();
-    let server_aes_key = generate_random_string(8);
+    let aes_session_key = generate_random_string(16);
 
     // send the rsa public key
     stream.write_all(&rsa_session_key.pub_key.as_bytes())?;
@@ -112,7 +112,7 @@ fn handle_client(mut stream: TcpStream) -> io::Result<std::net::SocketAddr> {
     let client_pub_key = rsa::PublicKey::new(n, e);
 
     // send the crypted aes key to the client
-    let message = rsa::cypher_message(Vec::from(server_aes_key.clone()), client_pub_key);
+    let message = rsa::cypher_message(Vec::from(aes_session_key.clone()), client_pub_key);
     stream.write_all(&message)?;
 
     // receive the client aes key
@@ -121,13 +121,19 @@ fn handle_client(mut stream: TcpStream) -> io::Result<std::net::SocketAddr> {
     let buffer = rsa::decypher_message(buffer.to_vec(), rsa_session_key);
     let client_aes_key = String::from_utf8(buffer).unwrap();
 
-    // assemble the two part of the aes key
-    let aes_session_key = format!("{}{}", server_aes_key, client_aes_key);
+    // verifie that the key receive correspond to the key sended
+    if client_aes_key != aes_session_key {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Hash verification failed",
+        ));
+    }
+
+    // convertie la string en [u8, 16]
     let aes_session_key: [u8; 16] = aes_session_key
         .as_bytes()
         .try_into()
         .expect("AES session key must be 16 bytes");
-    println!("tunel up");
 
     // ==============================================
     // Authentification
