@@ -123,7 +123,7 @@ fn handle_client(mut stream: TcpStream) -> io::Result<std::net::SocketAddr> {
     if client_aes_key != aes_session_key {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
-            "Hash verification failed",
+            "Key verification failed",
         ));
     }
 
@@ -182,6 +182,12 @@ fn handle_client(mut stream: TcpStream) -> io::Result<std::net::SocketAddr> {
         };
 
         if command == "exit" {
+            send(
+                &mut stream,
+                String::from_str("OK").unwrap(),
+                aes_session_key,
+            )?;
+            stream.shutdown(Shutdown::Both)?;
             break;
         }
 

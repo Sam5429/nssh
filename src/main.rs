@@ -1,7 +1,6 @@
 mod client;
 mod crypto;
 mod serveur;
-
 use std::env;
 
 fn main() {
