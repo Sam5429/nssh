@@ -2,7 +2,8 @@
 
 ## Principe
 
-RSA est un algorithme de chiffrement asymétrique. Cela signifie que le processus de chiffrement et de déchiffrement n'est pas symétrique (on ne fait pas la même chose dans les deux sens). Le grand avantage de RSA est qu'il n'est pas nécessaire de s'accorder sur un secret commun pour chiffrer un message, contrairement à des algorithmes comme AES. Cela permet d'envoyer un premier message pour s'accorder sur une clé secrète et commencer à utiliser AES, qui est beaucoup plus rapide.
+RSA est un algorithme de chiffrement asymétrique. Cela signifie que le processus de chiffrement et de déchiffrement n'est pas symétrique, MAIS NON JURE ! En faite ca veut dire qu'on chiffre et déchiffre le message avec deux clé différente. Le grand avantage de RSA est qu'il n'est pas nécessaire de s'accorder sur un secret commun pour chiffrer un message, contrairement à des algorithmes comme AES.
+Toute la sécurité de RSA vient de la difficulté à faire une factorisation en nombre premier. Mais on va voir ça plus en détail.
 
 ## Attention
 

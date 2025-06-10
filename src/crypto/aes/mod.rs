@@ -75,29 +75,6 @@ pub fn decypher_message(message: Vec<u8>, key: [u8; 16]) -> Vec<u8> {
     bytes
 }
 
-pub fn string_to_key(key_string: &str) -> [u8; 16] {
-    let mut key = [0u8; 16];
-
-    // Check if the key is too short
-    // If it is, fill the rest with 0
-    if key_string.len() < 16 {
-        for i in key_string.len()..16 {
-            key[i] = 0;
-        }
-    }
-
-    // Convert the string to bytes and fill the key array
-    for (i, byte) in key_string.as_bytes().iter().enumerate() {
-        if i < 16 {
-            key[i] = *byte;
-        } else {
-            break;
-        }
-    }
-
-    key // Return the key
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -125,7 +102,11 @@ mod tests {
 
     #[test]
     fn cypher_decypher_string() {
-        let key = string_to_key("AdfqdmFqdfqsdfqdfDFs");
+        let key = "AdfqdmFqdfqsdfqdfDFs";
+        let key: [u8; 16] = key
+            .as_bytes()
+            .try_into()
+            .expect("AES session key must be 16 bytes");
         let message = "test moi ça ma gueule, je veut te voir en maillot de bain";
 
         // Cypher the message

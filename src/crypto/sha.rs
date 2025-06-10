@@ -25,10 +25,6 @@ fn rotr(x: u32, n: u32) -> u32 {
     (x >> n) | (x << (32 - n))
 }
 
-fn rotl(x: u32, n: u32) -> u32 {
-    (x << n) | (x >> (32 - n))
-}
-
 fn sigma0(x: u32) -> u32 {
     rotr(x, 2) ^ rotr(x, 13) ^ rotr(x, 22)
 }
@@ -86,7 +82,8 @@ fn add32(a: u32, b: u32) -> u32 {
     a.wrapping_add(b)
 }
 
-pub fn sha256(message: Vec<u8>) -> [u32; 8] {
+pub fn sha256(mut message: Vec<u8>) -> [u32; 8] {
+    preprocess_message(&mut message);
     let message = parse_message(message);
     let mut hash: [u32; 8] = [
         0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab,
@@ -153,17 +150,11 @@ mod tests {
             .join("")
     }
 
-    fn hash_bytes_to_hex(bytes: &[u8]) -> String {
-        let hash = sha256(bytes.to_vec());
-        hash_to_hex(hash)
-    }
-
     #[test]
     fn test_sha256_empty() {
         // SHA256("") = e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
         let expected = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
-        let mut msg = Vec::new();
-        preprocess_message(&mut msg);
+        let msg = Vec::new();
         let hash = sha256(msg);
         assert_eq!(hash_to_hex(hash), expected);
     }
@@ -172,8 +163,7 @@ mod tests {
     fn test_sha256_abc() {
         // SHA256("abc") = ba7816bf 8f01cfea 414140de 5dae2223 b00361a396177a9cb410ff61f20015ad
         let expected = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
-        let mut msg = "abc".trim().as_bytes().to_vec();
-        preprocess_message(&mut msg);
+        let msg = "abc".trim().as_bytes().to_vec();
         let hash = sha256(msg);
         assert_eq!(hash_to_hex(hash), expected);
     }
@@ -182,8 +172,7 @@ mod tests {
     fn test_sha256_longer() {
         // SHA256("The quick brown fox jumps over the lazy dog") = d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592
         let expected = "d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592";
-        let mut msg = b"The quick brown fox jumps over the lazy dog".to_vec();
-        preprocess_message(&mut msg);
+        let msg = b"The quick brown fox jumps over the lazy dog".to_vec();
         let hash = sha256(msg);
         assert_eq!(hash_to_hex(hash), expected);
     }
@@ -192,8 +181,7 @@ mod tests {
     fn test_sha256_longer2() {
         // SHA256("The quick brown fox jumps over the lazy dog.") = ef537f25c895bfa782526529a9b63d97aa631564d5d789c2b765448c8635fb6c
         let expected = "ef537f25c895bfa782526529a9b63d97aa631564d5d789c2b765448c8635fb6c";
-        let mut msg = b"The quick brown fox jumps over the lazy dog.".to_vec();
-        preprocess_message(&mut msg);
+        let msg = b"The quick brown fox jumps over the lazy dog.".to_vec();
         let hash = sha256(msg);
         assert_eq!(hash_to_hex(hash), expected);
     }
@@ -202,8 +190,7 @@ mod tests {
     fn test_sha256_repeated() {
         // SHA256("aaaaaaaaaa") = bf2cb58a68f684d95a3b78ef8f661c9a4e5b09e82cc8f9cc88cce90528caeb27
         let expected = "bf2cb58a68f684d95a3b78ef8f661c9a4e5b09e82cc8f9cc88cce90528caeb27";
-        let mut msg = b"aaaaaaaaaa".to_vec();
-        preprocess_message(&mut msg);
+        let msg = b"aaaaaaaaaa".to_vec();
         let hash = sha256(msg);
         assert_eq!(hash_to_hex(hash), expected);
     }

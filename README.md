@@ -6,7 +6,7 @@ Ce projet à pour but de faire une implémentation simplifié du protocole ssh.
 Pour se faire je me suis amusé a recoder **RSA**, **AES** et **SHA256**. On va donc voir comment fonctionne ssh (très simplifié) et comment fonctionne chacun de c'est algo.
 
 Le code est commenté et documenté, merci de me dire si vous avez des remarques ou des conseils (c'est mon premier projet en rust).
-Vous trouverez ici des explication sur : [RSA](doc/RSA.md), [AES](doc/AES.md) et [SHA256](doc/SHA256.md).
+Vous trouverez ici des explication sur : [RSA](doc/RSA.md), [AES](doc/AES/AES.md) et [SHA256](doc/SHA/SHA256.md).
 
 ## Objectif :nerd_face:
 
@@ -49,7 +49,7 @@ Des chercheurs du MIT ont trouvé la solution avec la cryptographie asymétrique
 - Tu peux envoyer ta clé publique à tout le monde
 - Seul celui qui a la clé privée correspondante peut déchiffrer
 
-C'est le principe de [RSA](doc/RSA.md), et c'est super pratique !
+C'est le principe de RSA, et c'est super pratique !
 
 ## Comment on s'en sert ?
 
@@ -58,7 +58,7 @@ Cette partie est propre a mon implémentation de SSH et peu changer d'une implé
 Mais voici les étapes pour s'échanger la clé qui va chiffré tout le reste des échanges.
 1. **Génération de clé RSA**: On génére une clé RSA qui va nous servir à échanger la clé AES
 2. **Echange de clé public**: le client et le serveur s'envoie leur clé public.
-3. **Echange de clé AES**: Le serveur génére une clé AES et l'envoie au client, le client lui renvoie la clé AES qu'il a reçut. De cette manière on est sur que la clé que le client a reçu est celle qu'on a envoyer et que personne n'a intercepté le message pour le changer. 
+3. **Echange de clé AES**: Le serveur génére une clé AES et l'envoie au client, le client lui renvoie la clé AES qu'il a reçut. De cette manière on est sur que la clé que le client a reçu est celle qu'on a envoyer et que personne n'a intercepté le message pour le changer.
 2. **Chiffrement des données** : Une fois la clé échangée, on utilise AES pour tout chiffrer. On se sert plutôt de AES car RSA est beaucoup plus lent surtout sur des grands volume de données.
 
 ## L'intégrité : la dernière brique de SSH
@@ -80,4 +80,3 @@ Dernière étape cruciale : vérifier l'identité de ton interlocuteur. Pour ça
 - Ou des empreintes de clés publiques
 
 Comme ça, t'es sûr à 100% que tu parles bien à ton pote, et pas à un imposteur !
-

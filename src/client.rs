@@ -1,27 +1,9 @@
 use crate::crypto::aes;
 use crate::crypto::rsa;
 use crate::crypto::sha;
-use rand::Rng;
 use std::io::{self, Read, Write};
 use std::net::TcpStream;
 use std::str::FromStr;
-
-/// Generate a random string containing letters and digits.
-/// args:
-/// :lenght: the number of char of the string
-fn generate_random_string(length: usize) -> String {
-    const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
-                             abcdefghijklmnopqrstuvwxyz\
-                             0123456789";
-    let mut rng = rand::rng();
-
-    (0..length)
-        .map(|_| {
-            let idx = rng.random_range(0..CHARSET.len());
-            CHARSET[idx] as char
-        })
-        .collect()
-}
 
 /// Send a string to a client by a stream using aes to cypher the string
 fn send(stream: &mut TcpStream, message: String, aes_key: [u8; 16]) -> io::Result<()> {

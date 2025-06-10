@@ -17,12 +17,6 @@ impl PublicKey {
         PublicKey { n, e }
     }
 
-    pub fn clone(&self) -> Self {
-        PublicKey {
-            n: self.n,
-            e: self.e,
-        }
-    }
     pub fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(8);
         bytes.extend_from_slice(&self.n.to_be_bytes());
@@ -40,7 +34,7 @@ pub struct PrivateKey {
 }
 
 impl PrivateKey {
-    pub fn new(p: u32, q: u32, d: u32, pub_key: PublicKey) -> Self {
+    pub fn _new(p: u32, q: u32, d: u32, pub_key: PublicKey) -> Self {
         PrivateKey { p, q, d, pub_key }
     }
 
@@ -156,7 +150,7 @@ mod tests {
         // Arrange -> on a un message et une clé
         let message = "Hello, world!";
         let public_key = PublicKey::new(2436929723, 5);
-        let private_key = PrivateKey::new(56519, 43117, 1462098053, public_key.clone());
+        let private_key = PrivateKey::_new(56519, 43117, 1462098053, public_key.clone());
 
         // Act -> chiffre et déciffre un message
         let decyphered_message = String::from_utf8(decypher_message(
