@@ -67,7 +67,7 @@ Avec l'implémentation que j'ai faite, si deux bloc sont identique, le texte chi
 
 ## Resources
 
-- Un doc qui aide pour l'implémentation technique : [FIPS AES](/AES/nist.fips.197.pdf)
+- Un doc qui aide pour l'implémentation technique : [FIPS AES](./AES/nist.fips.197.pdf)
 - Des vidéos qui m'on aidé a comprendre l'algorithme :
 	- [AES: How to Design Secure Encryption](https://www.youtube.com/watch?v=C4ATDMIz5wc)
-	- [AES: How to Design Secure Encryption](https://www.youtube.com/watch?v=FAaki7d5vvY&t=806s)
+	- [AES n'est pas (toujours) sécurisé.](https://www.youtube.com/watch?v=FAaki7d5vvY&t=806s)
